@@ -1,0 +1,6 @@
+ADD_SCENE(jam_flipper, start,          Start)
+ADD_SCENE(jam_flipper, config,         Config)
+ADD_SCENE(jam_flipper, console_output, ConsoleOutput)
+ADD_SCENE(jam_flipper, target_select,  TargetSelect)
+ADD_SCENE(jam_flipper, client_select,  ClientSelect)
+ADD_SCENE(jam_flipper, wifi_pass,      WifiPass)

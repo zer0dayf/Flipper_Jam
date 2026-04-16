@@ -1,0 +1,14 @@
+App(
+    appid="jam_flipper",
+    name="JamFlipper",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="jam_flipper_app",
+    requires=["gui", "storage"],
+    stack_size=4 * 1024,
+    order=90,
+    fap_category="GPIO",
+    fap_version=(1, 0),
+    fap_icon="images/icon_10x10.png",
+    fap_description="ESP32 WiFi Attack Companion",
+    fap_author="JamFlipper",
+)

@@ -1,0 +1,35 @@
+# ── Flipper App Build Artifacts ───────────────────────────────────
+flipper_app/dist/
+flipper_app/debug/
+flipper_app/.vscode/
+*.fap
+*.elf
+*.map
+
+# ── IDE Config (editor-specific, not project-wide) ────────────────
+.vscode/
+.idea/
+flipper_app/.clangd
+flipper_app/.clang-format
+flipper_app/.editorconfig
+
+# ── Arduino / ESP32 Build Output ─────────────────────────────────
+build/
+*.bin
+*.hex
+*.uf2
+*.extra_flags
+
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
