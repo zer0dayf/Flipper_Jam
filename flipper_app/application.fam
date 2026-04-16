@@ -10,5 +10,5 @@ App(
     fap_version=(1, 0),
     fap_icon="images/icon_10x10.png",
     fap_description="ESP32 WiFi Attack Companion",
-    fap_author="JamFlipper",
+    fap_author="zer0dayf",
 )
