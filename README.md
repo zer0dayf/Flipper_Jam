@@ -182,7 +182,7 @@ python3 -m ufbt update \
 **Build**
 ```bash
 cd flipper_app
-python3 -m ufbt build
+ufbt build
 ```
 
 The compiled `.fap` will be in `flipper_app/dist/`.
@@ -190,7 +190,7 @@ The compiled `.fap` will be in `flipper_app/dist/`.
 **Install to Flipper**
 ```bash
 # With Flipper connected via USB:
-python3 -m ufbt launch
+ufbt launch
 
 # Or drag flipper_app/dist/jam_flipper.fap to
 # SD Card → apps → GPIO via qFlipper
@@ -363,10 +363,10 @@ python3 -m ufbt update \
 
 # Derle
 cd flipper_app
-python3 -m ufbt build
+ufbt build
 
 # Flipper'a yükle (USB bağlıyken)
-python3 -m ufbt launch
+ufbt launch
 ```
 
 Veya `flipper_app/dist/jam_flipper.fap` dosyasını qFlipper ile `SD Card → apps → GPIO` klasörüne kopyala.
