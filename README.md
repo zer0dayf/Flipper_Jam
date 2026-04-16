@@ -2,14 +2,12 @@
 
 # ⚡ JamFlipper
 
-**Flipper Zero + ESP32 WiFi Attack Companion**
+**Flipper Zero + ESP32 WiFi Security Research Tool**
 
 [![Platform](https://img.shields.io/badge/Platform-Flipper%20Zero-orange)](https://flipperzero.one)
-[![Firmware](https://img.shields.io/badge/Firmware-Momentum-blue)](https://github.com/Next-Flip/Momentum-Firmware)
+[![Firmware](https://img.shields.io/badge/Firmware-Momentum%20011+-blue)](https://github.com/Next-Flip/Momentum-Firmware)
 [![ESP32](https://img.shields.io/badge/ESP32-WiFi%20Dev%20Board-green)](https://shop.flipperzero.one/products/wifi-devboard)
 [![License](https://img.shields.io/badge/License-MIT-red)](LICENSE)
-
-*A WiFi security research tool for educational purposes*
 
 [English](#english) · [Türkçe](#türkçe)
 
@@ -17,7 +15,7 @@
 
 ---
 
-> ⚠️ **LEGAL NOTICE:** This tool is intended **only for use on networks you own** or have **explicit written permission** to test. Attacking networks without authorization is illegal and punishable by law. The developer assumes no liability.
+> ⚠️ **Legal Notice / Yasal Uyarı:** For educational and authorized testing only. Using this tool on networks without permission is illegal. / Yalnızca eğitim ve izinli testler için. İzinsiz kullanım yasadışıdır.
 
 ---
 
@@ -25,223 +23,211 @@
 
 ## 🇬🇧 English
 
-### What is JamFlipper?
+### Overview
 
-JamFlipper is an open-source WiFi security research tool that pairs a **Flipper Zero** with an **ESP32 WiFi Dev Board** to perform various WiFi attack and auditing scenarios.
-
-The Flipper Zero acts as the **command & control interface** (display + buttons), while the ESP32 Dev Board handles the **radio layer** (deauth frames, beacon spam, captive portal, etc.).
+JamFlipper pairs a **Flipper Zero** with an **ESP32 WiFi Dev Board** over UART to conduct WiFi security assessments. The Flipper Zero handles all UI and controls; the ESP32 executes the radio operations.
 
 ```
 ┌─────────────────┐   UART (GPIO)   ┌──────────────────────┐
 │   Flipper Zero  │ ◄─────────────► │  ESP32 WiFi Dev Board│
-│  (UI / Control) │                 │  (WiFi Radio Layer)  │
+│   UI / Control  │                 │    WiFi Radio Layer   │
 └─────────────────┘                 └──────────────────────┘
 ```
 
-### Features
+---
+
+### Attack Modes
+
+#### Core Modes
 
 | Mode | Description |
 |------|-------------|
-| 🔇 **Complete Jam** | Floods all nearby channels with deauth frames |
-| 📡 **Beacon Spam** | Broadcasts a list of fake SSIDs (customizable) |
-| 🎯 **Targeted Deauth** | Disconnects a specific client from a selected AP |
-| 🕵️ **Evil Twin** | Opens a rogue AP with a captive portal |
-| 🍎 **Phishing Portals** | Brand-themed login pages (Instagram, Facebook, Google, Netflix) |
-| 🔍 **WiFi Sniff** | Scans nearby networks and lists MAC addresses |
+| 🔍 **WiFi Scan** | Scans nearby access points, lists SSID / BSSID / channel / RSSI. Optional PCAP capture saved to SD card. |
+| 🔇 **Complete Jam** | Floods all channels with deauthentication frames, disconnecting every nearby client. |
+| 🎯 **WiFi Jam** | Targeted deauth against a single selected AP. |
+| 👥 **Listed Deauth** | Deauths multiple selected APs from the scan list simultaneously. |
+| 📡 **Beacon Spam** | Broadcasts up to 20 fake SSIDs continuously. Supports a custom SSID list from `custom_ssids.txt`. |
+| 🕵️ **WiFi Sniff** | Passive monitor-mode capture of raw 802.11 frames, saved as `.pcap` to SD card. |
+| 👿 **Evil Twin** | Clones a target AP's SSID (with optional MAC clone and lookalike suffix). Runs a captive portal that captures the real WiFi password when the victim reconnects. |
+
+#### Beacon Portal Modes *(no deauth — standalone rogue AP)*
+
+These modes open a rogue access point broadcasting a chosen SSID and serve a phishing captive portal. Credentials are saved to the Flipper SD card.
+
+| Mode | Portal Theme |
+|------|-------------|
+| **G-Login Beacon** | Google account login page |
+| **Instagram Beacon** | Instagram login page |
+| **Facebook Beacon** | Facebook login page |
+| **Telegram Beacon** | Telegram login page |
+| **Starbucks Beacon** | Starbucks Free WiFi portal |
+| **McDonald's Beacon** | McDonald's Free WiFi portal |
+| **Public Wi-Fi Beacon** | Generic public hotspot portal |
+| **School Beacon** | School/campus login portal |
+
+#### Targeted Portal Modes *(deauth + rogue AP)*
+
+Same portal themes as above, but first **deauthenticates clients from the real AP**, then brings up the rogue AP. The victim's device reconnects automatically to the cloned network.
+
+| Mode | Action |
+|------|--------|
+| **Target G-Login** | Deauth target → Google phishing portal |
+| **Target Instagram** | Deauth target → Instagram phishing portal |
+| **Target Facebook** | Deauth target → Facebook phishing portal |
+| **Target Telegram** | Deauth target → Telegram phishing portal |
+| **Target Starbucks** | Deauth target → Starbucks portal |
+| **Target McDonald's** | Deauth target → McDonald's portal |
+| **Target Public Wi-Fi** | Deauth target → Generic portal |
+| **Target School** | Deauth target → School portal |
+
+---
+
+### Captive Portal Engine
+
+The ESP32 runs a full captive portal stack designed to trigger the login popup on all major platforms:
+
+- **DHCP Option 114 (RFC 8910)** — advertises the portal URI directly via DHCP, bypassing DNS entirely
+- **DNS wildcard** — all DNS queries resolve to `192.168.4.1`
+- **Platform-specific HTTP handlers** — `/generate_204` (Android), `/hotspot-detect.html` (iOS/macOS), `/ncsi.txt` (Windows), connectivity check endpoints (Linux NetworkManager)
+- **lwIP Layer-3 packet hook** — blocks DNS-over-TLS (TCP/UDP port 853) to force plain DNS fallback on Android Private DNS, and blocks QUIC (UDP 443) to prevent Chrome's QUIC PROTOCOL ERROR
+
+---
+
+### Captured Data
+
+All credentials and captures are saved to **SD card** at `/apps_data/jam_flipper/`:
+
+| File | Contents |
+|------|----------|
+| `passwords.txt` | Evil Twin — captured WiFi passwords |
+| `glogin_creds.txt` | Google login credentials |
+| `iglogin_creds.txt` | Instagram credentials |
+| `fblogin_creds.txt` | Facebook credentials |
+| `tgmlogin_creds.txt` | Telegram credentials |
+| `cap_YYYYMMDD_HHMMSS.pcap` | Raw 802.11 packet captures |
+
+---
 
 ### Requirements
 
 **Hardware**
-- Flipper Zero running Momentum firmware 011+
-- ESP32 WiFi Dev Board (official Flipper accessory or compatible ESP32-S2)
+- Flipper Zero running **Momentum firmware 011+**
+- **ESP32 WiFi Dev Board** (official Flipper accessory or compatible ESP32-S2)
 
 **Software**
 - Python 3.8+
-- `ufbt` (Flipper app builder)
+- `ufbt` — Flipper app builder
 - Arduino IDE 2.x **or** `arduino-cli`
-- ESP32 Arduino Core 3.x
+- ESP32 Arduino Core **3.x**
 
 ---
 
 ### Installation
 
-#### Step 1 — Flash the ESP32 WiFi Dev Board
+#### 1. Flash the ESP32 WiFi Dev Board
 
-`jam_flipper_esp32.cpp` is the ESP32 firmware source code. Flash it with one of the methods below.
+`jam_flipper_esp32.cpp` is the ESP32 firmware. Flash it using Arduino IDE or arduino-cli.
 
-**Method A — Arduino IDE**
+**Arduino IDE**
 
-1. Download Arduino IDE 2.x from https://www.arduino.cc/en/software
+1. Download Arduino IDE 2.x → https://www.arduino.cc/en/software
 
-2. Add the ESP32 board package:
-   - `File → Preferences → Additional Boards Manager URLs`:
-     ```
-     https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-     ```
-   - `Tools → Board → Boards Manager` → search **esp32 by Espressif Systems** → install version **3.x**
+2. Add ESP32 board support:  
+   `File → Preferences → Additional Boards Manager URLs`:
+   ```
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+   Then `Tools → Boards Manager` → install **esp32 by Espressif Systems 3.x**
 
-3. Open the firmware:
-   - Create a new sketch folder (e.g. `jam_flipper_esp32/`)
-   - Copy `jam_flipper_esp32.cpp` and `jam_flipper_types.h` into it
-   - Rename `jam_flipper_esp32.cpp` → `jam_flipper_esp32.ino`
+3. Create a sketch folder (e.g. `jam_flipper_esp32/`), copy `jam_flipper_esp32.cpp` and `jam_flipper_types.h` into it, rename the `.cpp` file to `.ino`.
 
-4. Set board settings:
-   - `Tools → Board → ESP32 Arduino → ESP32S2 Dev Module`
-   - `Tools → Upload Speed → 921600`
-   - `Tools → Port → (your ESP32 port)`
+4. Select board:  
+   `Tools → Board → ESP32 Arduino → ESP32S2 Dev Module`
 
-5. Click **Upload** (`Ctrl+U`)
+5. Select port and click **Upload** (`Ctrl+U`)
 
-**Method B — arduino-cli (command line)**
+**arduino-cli**
 
 ```bash
-# Install ESP32 core
+# Add ESP32 core
 arduino-cli core update-index \
   --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 arduino-cli core install esp32:esp32
 
-# Compile
+# Compile & upload (replace port)
 arduino-cli compile --fqbn esp32:esp32:esp32s2 jam_flipper_esp32/
-
-# Upload (replace /dev/ttyUSB0 with your port)
-arduino-cli upload --fqbn esp32:esp32:esp32s2 \
-  -p /dev/ttyUSB0 jam_flipper_esp32/
+arduino-cli upload  --fqbn esp32:esp32:esp32s2 -p /dev/ttyUSB0 jam_flipper_esp32/
 ```
 
-> **Port reference:** Linux → `/dev/ttyUSB0` or `/dev/ttyACM0` · macOS → `/dev/cu.usbmodem*` · Windows → `COM3`
+> **Port:** Linux `/dev/ttyUSB0` · macOS `/dev/cu.usbmodem*` · Windows `COM3`
 
-**Connect to Flipper Zero**
-
-After flashing, plug the ESP32 Dev Board into the Flipper Zero's top GPIO connector. JamFlipper communicates over UART.
+After flashing, plug the ESP32 Dev Board into the Flipper Zero's top GPIO connector.
 
 ---
 
-#### Step 2 — Build and Install the Flipper FAP
+#### 2. Install the Flipper App (FAP)
 
 **Install ufbt**
-
 ```bash
 pip install ufbt
 ```
 
-**Pull Momentum SDK** (required for Momentum firmware)
-
+**Pull Momentum SDK**
 ```bash
 python3 -m ufbt update \
   --index-url=https://up.momentum-fw.dev/firmware/directory.json \
   --channel=release
 ```
 
-**Generate the app icon**
-
-```bash
-mkdir -p flipper_app/images
-
-python3 - << 'EOF'
-import struct, zlib
-
-def chunk(name, data):
-    c = name.encode() + data
-    return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-
-def make_png(pixels):
-    w, h = len(pixels[0]), len(pixels)
-    raw = b''
-    for row in pixels:
-        byte, bits, rowb = 0, 0, b''
-        for px in row:
-            byte = (byte << 1) | px
-            bits += 1
-            if bits == 8:
-                rowb += bytes([byte]); byte = 0; bits = 0
-        if bits: rowb += bytes([byte << (8 - bits)])
-        raw += b'\x00' + rowb
-    ihdr = chunk('IHDR', struct.pack('>IIBBBBB', w, h, 1, 0, 0, 0, 0))
-    idat = chunk('IDAT', zlib.compress(raw))
-    iend = chunk('IEND', b'')
-    return b'\x89PNG\r\n\x1a\n' + ihdr + idat + iend
-
-pixels = [
-    [0,1,1,1,0,1,1,1,0,0],
-    [1,0,0,0,1,0,0,0,1,0],
-    [0,1,1,0,0,1,1,0,0,0],
-    [0,0,1,0,0,0,1,0,0,0],
-    [0,0,0,1,1,0,0,0,0,0],
-    [0,0,1,1,0,0,0,0,0,0],
-    [0,1,1,1,0,0,0,0,0,0],
-    [0,0,1,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0],
-]
-with open('flipper_app/images/icon_10x10.png', 'wb') as f:
-    f.write(make_png(pixels))
-print('Icon created!')
-EOF
-```
-
-**Build the FAP**
-
+**Build**
 ```bash
 cd flipper_app
 python3 -m ufbt build
 ```
 
-The compiled `jam_flipper.fap` will be in `flipper_app/dist/`.
+The compiled `.fap` will be in `flipper_app/dist/`.
 
-**Install on Flipper Zero**
-
+**Install to Flipper**
 ```bash
-# Option A — launch directly (Flipper connected via USB)
+# With Flipper connected via USB:
 python3 -m ufbt launch
 
-# Option B — copy manually via qFlipper
-# Drag flipper_app/dist/jam_flipper.fap to SD Card/apps/GPIO/
+# Or drag flipper_app/dist/jam_flipper.fap to
+# SD Card → apps → GPIO via qFlipper
 ```
 
 ---
 
 ### Usage
 
-1. Open `Apps → GPIO → JamFlipper` on your Flipper Zero
-2. Select an attack mode from the main menu
-3. Scan and select a target AP (if required)
-4. Press **OK** to start · Press **BACK** to stop
+1. On Flipper Zero: `Apps → GPIO → JamFlipper`
+2. Select a mode from the main menu
+3. For targeted modes: scan APs → select target → (optionally) select client
+4. Press **OK** to start · **BACK** to stop
+5. Live output shown on the console screen; credentials auto-saved to SD card
+
+---
 
 ### Repository Structure
 
 ```
-JamFlipper/
-├── README.md                    # This file
+Flipper_Jam/
+├── README.md
 ├── .gitignore
 ├── LICENSE
-├── custom_ssids.txt             # Custom SSID list for Beacon Spam
-├── jam_flipper_esp32.cpp        # ← ESP32 firmware (flash this to the Dev Board)
-├── jam_flipper_types.h          # Shared type definitions (ESP32 ↔ Flipper protocol)
+├── custom_ssids.txt          # Custom SSID list for Beacon Spam
+├── jam_flipper_esp32.cpp     # ESP32 firmware source (flash this)
+├── jam_flipper_types.h       # Shared type definitions
 │
-└── flipper_app/                 # Flipper Zero FAP application
-    ├── application.fam          # App manifest (name, version, icon)
-    ├── jam_flipper_app.c        # Main app entry & state machine
-    ├── jam_flipper_app_i.h      # Global state struct & enums
-    ├── jam_flipper_uart.c/h     # UART communication layer
+└── flipper_app/              # Flipper Zero FAP
+    ├── application.fam       # App manifest
+    ├── jam_flipper_app.c
+    ├── jam_flipper_app_i.h
+    ├── jam_flipper_uart.c/h
     ├── images/
-    │   └── icon_10x10.png       # App icon (1-bit, 10×10 px)
+    │   └── icon_10x10.png
     └── scenes/
-        ├── jam_flipper_scene_start.c         # Main menu
-        ├── jam_flipper_scene_config.c        # Mode configuration screens
-        ├── jam_flipper_scene_target_select.c # AP scan & selection
-        ├── jam_flipper_scene_client_select.c # Client selection
-        ├── jam_flipper_scene_console_output.c# Live log output
-        └── jam_flipper_scene_wifi_pass.c     # WiFi password input
 ```
-
-### UART Protocol
-
-Flipper and ESP32 communicate via text-based commands over GPIO UART:
-
-| Direction | Format | Example |
-|-----------|--------|---------|
-| Flipper → ESP32 | `CMD:<cmd>\|param:val` | `CMD:DEAUTH\|CH:6\|MAC:AA:BB:CC:DD:EE:FF` |
-| ESP32 → Flipper | `STATUS:<state>` / `LOG:<msg>` | `STATUS:PORTAL\|Active` |
 
 ---
 
@@ -249,29 +235,127 @@ Flipper and ESP32 communicate via text-based commands over GPIO UART:
 
 ## 🇹🇷 Türkçe
 
-### Nedir?
+### Ne Yapar?
 
-JamFlipper, Flipper Zero ile ESP32 WiFi Dev Board'u kullanarak çeşitli WiFi güvenlik testi senaryoları gerçekleştiren açık kaynaklı bir araştırma aracıdır.
+JamFlipper, Flipper Zero ile ESP32 WiFi Dev Board'u GPIO üzerinden UART ile eşleştirerek çeşitli WiFi güvenlik testleri yapmanı sağlar. Flipper Zero tüm arayüzü yönetir, ESP32 radyo katmanını çalıştırır.
 
-Flipper Zero **komuta merkezi** (ekran + butonlar), ESP32 ise **radyo katmanını** yönetir (deauth, beacon spam, captive portal).
+---
+
+### Saldırı Modları
+
+#### Temel Modlar
+
+| Mod | Açıklama |
+|-----|----------|
+| 🔍 **WiFi Scan** | Yakın AP'leri tarar, SSID / BSSID / kanal / RSSI listeler. İsteğe bağlı PCAP kaydı SD karta aktarılır. |
+| 🔇 **Complete Jam** | Tüm kanallara deauth paketi göndererek yakındaki tüm cihazları ağdan düşürür. |
+| 🎯 **WiFi Jam** | Seçilen tek bir AP'ye hedefli deauth uygular. |
+| 👥 **Listed Deauth** | Listeden seçilen birden fazla AP'ye aynı anda deauth gönderir. |
+| 📡 **Beacon Spam** | 20'ye kadar sahte SSID yayınlar. `custom_ssids.txt` ile özelleştirilebilir. |
+| 🕵️ **WiFi Sniff** | Ham 802.11 frame'leri pasif olarak yakalar, SD karta `.pcap` olarak kaydeder. |
+| 👿 **Evil Twin** | Hedef AP'nin SSID'sini (ve isteğe bağlı MAC adresini) klonlar. Captive portal üzerinden gerçek WiFi şifresini yakalar. |
+
+#### Beacon Portal Modları *(deauth yok — bağımsız sahte AP)*
+
+Seçilen SSID ile sahte bir AP açar ve phishing captive portal sunar. Girilen bilgiler SD karta kaydedilir.
+
+| Mod | Portal Teması |
+|-----|--------------|
+| **G-Login Beacon** | Google hesap giriş sayfası |
+| **Instagram Beacon** | Instagram giriş sayfası |
+| **Facebook Beacon** | Facebook giriş sayfası |
+| **Telegram Beacon** | Telegram giriş sayfası |
+| **Starbucks Beacon** | Starbucks Free WiFi portalı |
+| **McDonald's Beacon** | McDonald's Free WiFi portalı |
+| **Public Wi-Fi Beacon** | Genel halka açık hotspot portalı |
+| **School Beacon** | Okul / kampüs giriş portalı |
+
+#### Targeted Portal Modları *(deauth + sahte AP)*
+
+Yukarıdaki portal temalarının hedefli versiyonu. Önce gerçek AP'den istemcileri deauth eder, ardından sahte AP'yi açar. Kurban otomatik olarak klonlanan ağa bağlanır.
+
+| Mod | İşlem |
+|-----|-------|
+| **Target G-Login** | Deauth → Google phishing portalı |
+| **Target Instagram** | Deauth → Instagram phishing portalı |
+| **Target Facebook** | Deauth → Facebook phishing portalı |
+| **Target Telegram** | Deauth → Telegram phishing portalı |
+| **Target Starbucks** | Deauth → Starbucks portalı |
+| **Target McDonald's** | Deauth → McDonald's portalı |
+| **Target Public Wi-Fi** | Deauth → Genel portal |
+| **Target School** | Deauth → Okul portalı |
+
+---
+
+### Captive Portal Motoru
+
+Tüm büyük işletim sistemlerinde (Android, iOS, Windows, Linux) captive portal popup'ını tetiklemek için çok katmanlı bir yaklaşım kullanılır:
+
+- **DHCP Option 114 (RFC 8910)** — Portal URI'sini DHCP üzerinden direkt iletir, DNS'e gerek kalmaz
+- **DNS wildcard** — Tüm DNS sorguları `192.168.4.1`'e yönlendirilir
+- **Platform bazlı HTTP handler'lar** — Android `/generate_204`, iOS `/hotspot-detect.html`, Windows `/ncsi.txt`, Linux NetworkManager endpoint'leri
+- **lwIP Layer-3 paket hook** — DNS-over-TLS (port 853) ve QUIC (UDP 443) bloke edilerek Samsung gibi modern Android cihazlarda portal tespiti zorlanır
+
+---
+
+### Yakalanan Veriler
+
+Tüm bilgiler SD karta `/apps_data/jam_flipper/` klasörüne kaydedilir:
+
+| Dosya | İçerik |
+|-------|--------|
+| `passwords.txt` | Evil Twin ile yakalanan WiFi şifreleri |
+| `glogin_creds.txt` | Google kullanıcı adı/şifreleri |
+| `iglogin_creds.txt` | Instagram kullanıcı adı/şifreleri |
+| `fblogin_creds.txt` | Facebook kullanıcı adı/şifreleri |
+| `tgmlogin_creds.txt` | Telegram kullanıcı adı/şifreleri |
+| `cap_YYYYMMDD_HHMMSS.pcap` | Ham 802.11 paket yakaları |
+
+---
 
 ### Gereksinimler
 
-- Flipper Zero (Momentum firmware 011+)
-- ESP32 WiFi Dev Board
-- Python 3.8+, `ufbt`, Arduino IDE 2.x veya `arduino-cli`
+- Flipper Zero — Momentum firmware 011+
+- ESP32 WiFi Dev Board (Flipper resmi aksesuarı veya uyumlu ESP32-S2)
+- Python 3.8+, `ufbt`, Arduino IDE 2.x veya `arduino-cli`, ESP32 Arduino Core 3.x
+
+---
 
 ### Kurulum
 
-#### ESP32 Flash Etme
+#### 1. ESP32 WiFi Dev Board Flashlama
 
-`jam_flipper_esp32.cpp` dosyasını Arduino IDE veya `arduino-cli` ile ESP32'ye yükle.
+`jam_flipper_esp32.cpp` ESP32 firmware kaynak kodudur.
 
-Board ayarı: `Tools → Board → ESP32S2 Dev Module`
+**Arduino IDE ile:**
 
-#### Flipper FAP Derleme
+1. Arduino IDE 2.x indir → https://www.arduino.cc/en/software
+2. `File → Preferences → Additional Boards Manager URLs` ekle:
+   ```
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. `Tools → Boards Manager` → **esp32 by Espressif Systems 3.x** yükle
+4. `jam_flipper_esp32.cpp` ve `jam_flipper_types.h` dosyalarını aynı sketch klasörüne koy, `.cpp` uzantısını `.ino` yap
+5. `Tools → Board → ESP32S2 Dev Module` seç
+6. Port seç → **Upload** (`Ctrl+U`)
+
+**arduino-cli ile:**
+```bash
+arduino-cli core install esp32:esp32
+arduino-cli compile --fqbn esp32:esp32:esp32s2 jam_flipper_esp32/
+arduino-cli upload  --fqbn esp32:esp32:esp32s2 -p /dev/ttyUSB0 jam_flipper_esp32/
+```
+
+Flash tamamlandıktan sonra ESP32 Dev Board'u Flipper Zero'nun üst GPIO konektörüne tak.
+
+---
+
+#### 2. Flipper Uygulamasını Yükleme (FAP)
 
 ```bash
+# ufbt yükle
+pip install ufbt
+
 # Momentum SDK'yı çek
 python3 -m ufbt update \
   --index-url=https://up.momentum-fw.dev/firmware/directory.json \
@@ -281,13 +365,21 @@ python3 -m ufbt update \
 cd flipper_app
 python3 -m ufbt build
 
-# Yükle
+# Flipper'a yükle (USB bağlıyken)
 python3 -m ufbt launch
 ```
 
+Veya `flipper_app/dist/jam_flipper.fap` dosyasını qFlipper ile `SD Card → apps → GPIO` klasörüne kopyala.
+
+---
+
 ### Kullanım
 
-`Apps → GPIO → JamFlipper` → mod seç → hedef seç → **OK** ile başlat, **BACK** ile durdur.
+1. Flipper Zero'da `Apps → GPIO → JamFlipper`
+2. Ana menüden mod seç
+3. Hedefli modlarda: AP tara → hedef AP seç → (isteğe bağlı) istemci seç
+4. **OK** ile başlat · **BACK** ile durdur
+5. Canlı çıktı konsol ekranında görünür, bilgiler otomatik SD karta kaydedilir
 
 ---
 
